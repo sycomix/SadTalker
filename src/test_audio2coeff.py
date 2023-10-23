@@ -82,7 +82,7 @@ class Audio2Coeff():
             #class_id = 0#(i+10)%45
             #class_id = random.randint(0,46)                                   #46 styles can be selected 
             batch['class'] = torch.LongTensor([pose_style]).to(self.device)
-            results_dict_pose = self.audio2pose_model.test(batch) 
+            results_dict_pose = self.audio2pose_model.test(batch)
             pose_pred = results_dict_pose['pose_pred']                        #bs T 6
 
             pose_len = pose_pred.shape[1]
@@ -91,18 +91,25 @@ class Audio2Coeff():
                 pose_pred = torch.Tensor(savgol_filter(np.array(pose_pred.cpu()), pose_len, 2, axis=1)).to(self.device)
             else:
                 pose_pred = torch.Tensor(savgol_filter(np.array(pose_pred.cpu()), 13, 2, axis=1)).to(self.device) 
-            
+
             coeffs_pred = torch.cat((exp_pred, pose_pred), dim=-1)            #bs T 70
 
             coeffs_pred_numpy = coeffs_pred[0].clone().detach().cpu().numpy() 
 
             if ref_pose_coeff_path is not None: 
                  coeffs_pred_numpy = self.using_refpose(coeffs_pred_numpy, ref_pose_coeff_path)
-        
-            savemat(os.path.join(coeff_save_dir, '%s##%s.mat'%(batch['pic_name'], batch['audio_name'])),  
-                    {'coeff_3dmm': coeffs_pred_numpy})
 
-            return os.path.join(coeff_save_dir, '%s##%s.mat'%(batch['pic_name'], batch['audio_name']))
+            savemat(
+                os.path.join(
+                    coeff_save_dir,
+                    f"{batch['pic_name']}##{batch['audio_name']}.mat",
+                ),
+                {'coeff_3dmm': coeffs_pred_numpy},
+            )
+
+            return os.path.join(
+                coeff_save_dir, f"{batch['pic_name']}##{batch['audio_name']}.mat"
+            )
     
     def using_refpose(self, coeffs_pred_numpy, ref_pose_coeff_path):
         num_frames = coeffs_pred_numpy.shape[0]
@@ -112,7 +119,7 @@ class Audio2Coeff():
         if refpose_num_frames<num_frames:
             div = num_frames//refpose_num_frames
             re = num_frames%refpose_num_frames
-            refpose_coeff_list = [refpose_coeff for i in range(div)]
+            refpose_coeff_list = [refpose_coeff for _ in range(div)]
             refpose_coeff_list.append(refpose_coeff[:re, :])
             refpose_coeff = np.concatenate(refpose_coeff_list, axis=0)
 

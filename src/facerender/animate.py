@@ -52,20 +52,19 @@ class AnimateFromCoeff():
         for param in generator.parameters():
             param.requires_grad = False
         for param in kp_extractor.parameters():
-            param.requires_grad = False 
+            param.requires_grad = False
         for param in he_estimator.parameters():
             param.requires_grad = False
         for param in mapping.parameters():
             param.requires_grad = False
 
-        if sadtalker_path is not None:
-            if 'checkpoint' in sadtalker_path: # use safe tensor
-                self.load_cpk_facevid2vid_safetensor(sadtalker_path['checkpoint'], kp_detector=kp_extractor, generator=generator, he_estimator=None)
-            else:
-                self.load_cpk_facevid2vid(sadtalker_path['free_view_checkpoint'], kp_detector=kp_extractor, generator=generator, he_estimator=he_estimator)
-        else:
+        if sadtalker_path is None:
             raise AttributeError("Checkpoint should be specified for video head pose estimator.")
 
+        if 'checkpoint' in sadtalker_path: # use safe tensor
+            self.load_cpk_facevid2vid_safetensor(sadtalker_path['checkpoint'], kp_detector=kp_extractor, generator=generator, he_estimator=None)
+        else:
+            self.load_cpk_facevid2vid(sadtalker_path['free_view_checkpoint'], kp_detector=kp_extractor, generator=generator, he_estimator=he_estimator)
         if  sadtalker_path['mappingnet_checkpoint'] is not None:
             self.load_cpk_mapping(sadtalker_path['mappingnet_checkpoint'], mapping=mapping)
         else:
@@ -80,7 +79,7 @@ class AnimateFromCoeff():
         self.generator.eval()
         self.he_estimator.eval()
         self.mapping.eval()
-         
+
         self.device = device
     
     def load_cpk_facevid2vid_safetensor(self, checkpoint_path, generator=None, 
@@ -90,24 +89,27 @@ class AnimateFromCoeff():
         checkpoint = safetensors.torch.load_file(checkpoint_path)
 
         if generator is not None:
-            x_generator = {}
-            for k,v in checkpoint.items():
-                if 'generator' in k:
-                    x_generator[k.replace('generator.', '')] = v
+            x_generator = {
+                k.replace('generator.', ''): v
+                for k, v in checkpoint.items()
+                if 'generator' in k
+            }
             generator.load_state_dict(x_generator)
         if kp_detector is not None:
-            x_generator = {}
-            for k,v in checkpoint.items():
-                if 'kp_extractor' in k:
-                    x_generator[k.replace('kp_extractor.', '')] = v
+            x_generator = {
+                k.replace('kp_extractor.', ''): v
+                for k, v in checkpoint.items()
+                if 'kp_extractor' in k
+            }
             kp_detector.load_state_dict(x_generator)
         if he_estimator is not None:
-            x_generator = {}
-            for k,v in checkpoint.items():
-                if 'he_estimator' in k:
-                    x_generator[k.replace('he_estimator.', '')] = v
+            x_generator = {
+                k.replace('he_estimator.', ''): v
+                for k, v in checkpoint.items()
+                if 'he_estimator' in k
+            }
             he_estimator.load_state_dict(x_generator)
-        
+
         return None
 
     def load_cpk_facevid2vid(self, checkpoint_path, generator=None, discriminator=None, 
@@ -158,7 +160,7 @@ class AnimateFromCoeff():
 
         source_image=x['source_image'].type(torch.FloatTensor)
         source_semantics=x['source_semantics'].type(torch.FloatTensor)
-        target_semantics=x['target_semantics_list'].type(torch.FloatTensor) 
+        target_semantics=x['target_semantics_list'].type(torch.FloatTensor)
         source_image=source_image.to(self.device)
         source_semantics=source_semantics.to(self.device)
         target_semantics=target_semantics.to(self.device)
@@ -194,26 +196,24 @@ class AnimateFromCoeff():
             video.append(image)
         result = img_as_ubyte(video)
 
-        ### the generated video is 256x256, so we keep the aspect ratio, 
-        original_size = crop_info[0]
-        if original_size:
+        if original_size := crop_info[0]:
             result = [ cv2.resize(result_i,(img_size, int(img_size * original_size[1]/original_size[0]) )) for result_i in result ]
-        
+
         video_name = x['video_name']  + '.mp4'
-        path = os.path.join(video_save_dir, 'temp_'+video_name)
-        
+        path = os.path.join(video_save_dir, f'temp_{video_name}')
+
         imageio.mimsave(path, result,  fps=float(25))
 
         av_path = os.path.join(video_save_dir, video_name)
         return_path = av_path 
-        
-        audio_path =  x['audio_path'] 
+
+        audio_path =  x['audio_path']
         audio_name = os.path.splitext(os.path.split(audio_path)[-1])[0]
-        new_audio_path = os.path.join(video_save_dir, audio_name+'.wav')
+        new_audio_path = os.path.join(video_save_dir, f'{audio_name}.wav')
         start_time = 0
         # cog will not keep the .mp3 filename
         sound = AudioSegment.from_file(audio_path)
-        frames = frame_num 
+        frames = frame_num
         end_time = start_time + frames*1/25*1000
         word1=sound.set_frame_rate(16000)
         word = word1[start_time:end_time]
@@ -227,16 +227,23 @@ class AnimateFromCoeff():
             video_name_full = x['video_name']  + '_full.mp4'
             full_video_path = os.path.join(video_save_dir, video_name_full)
             return_path = full_video_path
-            paste_pic(path, pic_path, crop_info, new_audio_path, full_video_path, extended_crop= True if 'ext' in preprocess.lower() else False)
-            print(f'The generated video is named {video_save_dir}/{video_name_full}') 
+            paste_pic(
+                path,
+                pic_path,
+                crop_info,
+                new_audio_path,
+                full_video_path,
+                extended_crop='ext' in preprocess.lower(),
+            )
+            print(f'The generated video is named {video_save_dir}/{video_name_full}')
         else:
             full_video_path = av_path 
 
         #### paste back then enhancers
         if enhancer:
             video_name_enhancer = x['video_name']  + '_enhanced.mp4'
-            enhanced_path = os.path.join(video_save_dir, 'temp_'+video_name_enhancer)
-            av_path_enhancer = os.path.join(video_save_dir, video_name_enhancer) 
+            enhanced_path = os.path.join(video_save_dir, f'temp_{video_name_enhancer}')
+            av_path_enhancer = os.path.join(video_save_dir, video_name_enhancer)
             return_path = av_path_enhancer
 
             try:
@@ -245,7 +252,7 @@ class AnimateFromCoeff():
             except:
                 enhanced_images_gen_with_len = enhancer_list(full_video_path, method=enhancer, bg_upsampler=background_enhancer)
                 imageio.mimsave(enhanced_path, enhanced_images_gen_with_len, fps=float(25))
-            
+
             save_video_with_watermark(enhanced_path, new_audio_path, av_path_enhancer, watermark= False)
             print(f'The generated video is named {video_save_dir}/{video_name_enhancer}')
             os.remove(enhanced_path)

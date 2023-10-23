@@ -24,7 +24,7 @@ def gen_composed_video(args, device, first_frame_coeff, coeff_path, audio_path, 
     tmp_video_path = '/tmp/face3dtmp.mp4'
 
     facemodel = FaceReconModel(args)
-    
+
     video = cv2.VideoWriter(tmp_video_path, cv2.VideoWriter_fourcc(*'mp4v'), 25, (224, 224))
 
     for k in tqdm(range(coeff_pred.shape[0]), 'face3d rendering:'):
@@ -43,6 +43,6 @@ def gen_composed_video(args, device, first_frame_coeff, coeff_path, audio_path, 
 
     video.release()
 
-    command = 'ffmpeg -v quiet -y -i {} -i {} -strict -2 -q:v 1 {}'.format(audio_path, tmp_video_path, save_path)
+    command = f'ffmpeg -v quiet -y -i {audio_path} -i {tmp_video_path} -strict -2 -q:v 1 {save_path}'
     subprocess.call(command, shell=platform.system() != 'Windows')
 

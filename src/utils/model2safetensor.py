@@ -79,27 +79,30 @@ def load_cpk_facevid2vid_safetensor(checkpoint_path, generator=None,
     checkpoint = safetensors.torch.load_file(checkpoint_path)
 
     if generator is not None:
-        x_generator = {}
-        for k,v in checkpoint.items():
-            if 'generator' in k:
-                x_generator[k.replace('generator.', '')] = v
+        x_generator = {
+            k.replace('generator.', ''): v
+            for k, v in checkpoint.items()
+            if 'generator' in k
+        }
         generator.load_state_dict(x_generator)
     if kp_detector is not None:
-        x_generator = {}
-        for k,v in checkpoint.items():
-            if 'kp_extractor' in k:
-                x_generator[k.replace('kp_extractor.', '')] = v
+        x_generator = {
+            k.replace('kp_extractor.', ''): v
+            for k, v in checkpoint.items()
+            if 'kp_extractor' in k
+        }
         kp_detector.load_state_dict(x_generator)
     if he_estimator is not None:
-        x_generator = {}
-        for k,v in checkpoint.items():
-            if 'he_estimator' in k:
-                x_generator[k.replace('he_estimator.', '')] = v
+        x_generator = {
+            k.replace('he_estimator.', ''): v
+            for k, v in checkpoint.items()
+            if 'he_estimator' in k
+        }
         he_estimator.load_state_dict(x_generator)
-    
+
     return None
 
-free_view_checkpoint = '/apdcephfs/private_shadowcun/SadTalker/checkpoints/facevid2vid_'+str(size)+'-model.pth.tar'
+free_view_checkpoint = f'/apdcephfs/private_shadowcun/SadTalker/checkpoints/facevid2vid_{str(size)}-model.pth.tar'
 load_cpk_facevid2vid(free_view_checkpoint, kp_detector=kp_extractor, generator=generator, he_estimator=he_estimator)
 
 wav2lip_checkpoint = os.path.join(current_root_path, 'checkpoints', 'wav2lip.pth')
@@ -135,7 +138,14 @@ class SadTalker(torch.nn.Module):
 model = SadTalker(kp_extractor, generator, netG, audio2pose_model, net_recon)
 
 # here, we want to convert it to safetensor
-save_file(model.state_dict(), "checkpoints/SadTalker_V0.0.2_"+str(size)+".safetensors")
+save_file(
+    model.state_dict(), f"checkpoints/SadTalker_V0.0.2_{str(size)}.safetensors"
+)
 
 ### test
-load_cpk_facevid2vid_safetensor('checkpoints/SadTalker_V0.0.2_'+str(size)+'.safetensors', kp_detector=kp_extractor, generator=generator, he_estimator=None)
+load_cpk_facevid2vid_safetensor(
+    f'checkpoints/SadTalker_V0.0.2_{str(size)}.safetensors',
+    kp_detector=kp_extractor,
+    generator=generator,
+    he_estimator=None,
+)

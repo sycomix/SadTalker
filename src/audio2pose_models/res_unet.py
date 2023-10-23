@@ -60,6 +60,4 @@ class ResUnet(nn.Module):
 
         x10 = self.up_residual_conv3(x9)
 
-        output = self.output_layer(x10)
-
-        return output
+        return self.output_layer(x10)

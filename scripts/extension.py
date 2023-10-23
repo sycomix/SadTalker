@@ -21,11 +21,11 @@ def check_all_files_safetensor(current_dir):
 
     if not os.path.isdir(current_dir):
         return False
-    
+
     dirs = os.listdir(current_dir)
 
     for f in dirs:
-        if f in kv.keys():
+        if f in kv:
             del kv[f]
 
     return len(kv.keys()) == 0
@@ -44,11 +44,11 @@ def check_all_files(current_dir):
 
     if not os.path.isdir(current_dir):
         return False
-    
+
     dirs = os.listdir(current_dir)
 
     for f in dirs:
-        if f in kv.keys():
+        if f in kv:
             del kv[f]
 
     return len(kv.keys()) == 0
@@ -65,7 +65,7 @@ def get_source_image(image):
 def get_img_from_txt2img(x):
     talker_path = Path(paths.script_path) / "outputs"
     imgs_from_txt_dir = str(talker_path / "txt2img-images/")
-    imgs = glob.glob(imgs_from_txt_dir+'/*/*.png')
+    imgs = glob.glob(f'{imgs_from_txt_dir}/*/*.png')
     imgs.sort(key=lambda x:os.path.getmtime(os.path.join(imgs_from_txt_dir, x)))
     img_from_txt_path = os.path.join(imgs_from_txt_dir, imgs[-1])
     return img_from_txt_path, img_from_txt_path
@@ -73,7 +73,7 @@ def get_img_from_txt2img(x):
 def get_img_from_img2img(x):
     talker_path = Path(paths.script_path) / "outputs"
     imgs_from_img_dir = str(talker_path / "img2img-images/")
-    imgs = glob.glob(imgs_from_img_dir+'/*/*.png')
+    imgs = glob.glob(f'{imgs_from_img_dir}/*/*.png')
     imgs.sort(key=lambda x:os.path.getmtime(os.path.join(imgs_from_img_dir, x)))
     img_from_img_path = os.path.join(imgs_from_img_dir, imgs[-1])
     return img_from_img_path, img_from_img_path
@@ -131,7 +131,7 @@ def install():
     for k,v in kv.items():
         if not launch.is_installed(k):
             print(k, launch.is_installed(k))
-            launch.run_pip("install "+ v, "requirements for SadTalker")
+            launch.run_pip(f"install {v}", "requirements for SadTalker")
 
     if os.getenv('SADTALKER_CHECKPOINTS'):
         print('load Sadtalker Checkpoints from '+ os.getenv('SADTALKER_CHECKPOINTS'))
@@ -162,22 +162,26 @@ def install():
 def on_ui_tabs():
     install()
 
-    sys.path.extend([paths.script_path+'/extensions/SadTalker']) 
-    
-    repo_dir = paths.script_path+'/extensions/SadTalker/'
+    sys.path.extend([f'{paths.script_path}/extensions/SadTalker']) 
+
+    repo_dir = f'{paths.script_path}/extensions/SadTalker/'
 
     result_dir = opts.sadtalker_result_dir
     os.makedirs(result_dir, exist_ok=True)
 
     from app import sadtalker_demo  
 
-    if  os.getenv('SADTALKER_CHECKPOINTS'):
+    if os.getenv('SADTALKER_CHECKPOINTS'):
         checkpoint_path = os.getenv('SADTALKER_CHECKPOINTS')
     else:
-        checkpoint_path = repo_dir+'checkpoints/'
+        checkpoint_path = f'{repo_dir}checkpoints/'
 
-    audio_to_video = sadtalker_demo(checkpoint_path=checkpoint_path, config_path=repo_dir+'src/config', warpfn = wrap_queued_call)
-   
+    audio_to_video = sadtalker_demo(
+        checkpoint_path=checkpoint_path,
+        config_path=f'{repo_dir}src/config',
+        warpfn=wrap_queued_call,
+    )
+
     return [(audio_to_video, "SadTalker", "extension")]
 
 def on_ui_settings():

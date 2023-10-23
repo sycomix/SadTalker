@@ -28,9 +28,7 @@ def kp2gaussian(kp, spatial_size, kp_variance):
 
     mean_sub = (coordinate_grid - mean)
 
-    out = torch.exp(-0.5 * (mean_sub ** 2).sum(-1) / kp_variance)
-
-    return out
+    return torch.exp(-0.5 * (mean_sub ** 2).sum(-1) / kp_variance)
 
 def make_coordinate_grid_2d(spatial_size, type):
     """
@@ -46,9 +44,7 @@ def make_coordinate_grid_2d(spatial_size, type):
     yy = y.view(-1, 1).repeat(1, w)
     xx = x.view(1, -1).repeat(h, 1)
 
-    meshed = torch.cat([xx.unsqueeze_(2), yy.unsqueeze_(2)], 2)
-
-    return meshed
+    return torch.cat([xx.unsqueeze_(2), yy.unsqueeze_(2)], 2)
 
 
 def make_coordinate_grid(spatial_size, type):
@@ -60,14 +56,12 @@ def make_coordinate_grid(spatial_size, type):
     x = (2 * (x / (w - 1)) - 1)
     y = (2 * (y / (h - 1)) - 1)
     z = (2 * (z / (d - 1)) - 1)
-   
+
     yy = y.view(1, -1, 1).repeat(d, 1, w)
     xx = x.view(1, 1, -1).repeat(d, h, 1)
     zz = z.view(-1, 1, 1).repeat(1, h, w)
 
-    meshed = torch.cat([xx.unsqueeze_(3), yy.unsqueeze_(3), zz.unsqueeze_(3)], 3)
-
-    return meshed
+    return torch.cat([xx.unsqueeze_(3), yy.unsqueeze_(3), zz.unsqueeze_(3)], 3)
 
 
 class ResBottleneck(nn.Module):
@@ -246,10 +240,7 @@ class SameBlock2d(nn.Module):
         self.conv = nn.Conv2d(in_channels=in_features, out_channels=out_features,
                               kernel_size=kernel_size, padding=padding, groups=groups)
         self.norm = BatchNorm2d(out_features, affine=True)
-        if lrelu:
-            self.ac = nn.LeakyReLU()
-        else:
-            self.ac = nn.ReLU()
+        self.ac = nn.LeakyReLU() if lrelu else nn.ReLU()
 
     def forward(self, x):
         out = self.conv(x)
@@ -266,17 +257,22 @@ class Encoder(nn.Module):
     def __init__(self, block_expansion, in_features, num_blocks=3, max_features=256):
         super(Encoder, self).__init__()
 
-        down_blocks = []
-        for i in range(num_blocks):
-            down_blocks.append(DownBlock3d(in_features if i == 0 else min(max_features, block_expansion * (2 ** i)),
-                                           min(max_features, block_expansion * (2 ** (i + 1))),
-                                           kernel_size=3, padding=1))
+        down_blocks = [
+            DownBlock3d(
+                in_features
+                if i == 0
+                else min(max_features, block_expansion * (2**i)),
+                min(max_features, block_expansion * (2 ** (i + 1))),
+                kernel_size=3,
+                padding=1,
+            )
+            for i in range(num_blocks)
+        ]
         self.down_blocks = nn.ModuleList(down_blocks)
 
     def forward(self, x):
         outs = [x]
-        for down_block in self.down_blocks:
-            outs.append(down_block(outs[-1]))
+        outs.extend(down_block(outs[-1]) for down_block in self.down_blocks)
         return outs
 
 
@@ -338,12 +334,20 @@ class KPHourglass(nn.Module):
 
     def __init__(self, block_expansion, in_features, reshape_features, reshape_depth, num_blocks=3, max_features=256):
         super(KPHourglass, self).__init__()
-        
+
         self.down_blocks = nn.Sequential()
         for i in range(num_blocks):
-            self.down_blocks.add_module('down'+ str(i), DownBlock2d(in_features if i == 0 else min(max_features, block_expansion * (2 ** i)),
-                                                                   min(max_features, block_expansion * (2 ** (i + 1))),
-                                                                   kernel_size=3, padding=1))
+            self.down_blocks.add_module(
+                f'down{str(i)}',
+                DownBlock2d(
+                    in_features
+                    if i == 0
+                    else min(max_features, block_expansion * (2**i)),
+                    min(max_features, block_expansion * (2 ** (i + 1))),
+                    kernel_size=3,
+                    padding=1,
+                ),
+            )
 
         in_filters = min(max_features, block_expansion * (2 ** num_blocks))
         self.conv = nn.Conv2d(in_channels=in_filters, out_channels=reshape_features, kernel_size=1)
@@ -352,7 +356,10 @@ class KPHourglass(nn.Module):
         for i in range(num_blocks):
             in_filters = min(max_features, block_expansion * (2 ** (num_blocks - i)))
             out_filters = min(max_features, block_expansion * (2 ** (num_blocks - i - 1)))
-            self.up_blocks.add_module('up'+ str(i), UpBlock3d(in_filters, out_filters, kernel_size=3, padding=1))
+            self.up_blocks.add_module(
+                f'up{str(i)}',
+                UpBlock3d(in_filters, out_filters, kernel_size=3, padding=1),
+            )
 
         self.reshape_depth = reshape_depth
         self.out_filters = out_filters
@@ -436,8 +443,7 @@ class SPADE(nn.Module):
         actv = self.mlp_shared(segmap)
         gamma = self.mlp_gamma(actv)
         beta = self.mlp_beta(actv)
-        out = normalized * (1 + gamma) + beta
-        return out
+        return normalized * (1 + gamma) + beta
     
 
 class SPADEResnetBlock(nn.Module):
@@ -468,15 +474,10 @@ class SPADEResnetBlock(nn.Module):
         x_s = self.shortcut(x, seg1)
         dx = self.conv_0(self.actvn(self.norm_0(x, seg1)))
         dx = self.conv_1(self.actvn(self.norm_1(dx, seg1)))
-        out = x_s + dx
-        return out
+        return x_s + dx
 
     def shortcut(self, x, seg1):
-        if self.learned_shortcut:
-            x_s = self.conv_s(self.norm_s(x, seg1))
-        else:
-            x_s = x
-        return x_s
+        return self.conv_s(self.norm_s(x, seg1)) if self.learned_shortcut else x
 
     def actvn(self, x):
         return F.leaky_relu(x, 2e-1)
@@ -493,12 +494,10 @@ class audio2image(nn.Module):
 
     def headpose_pred_to_degree(self, pred):
         device = pred.device
-        idx_tensor = [idx for idx in range(66)]
+        idx_tensor = list(range(66))
         idx_tensor = torch.FloatTensor(idx_tensor).to(device)
         pred = F.softmax(pred)
-        degree = torch.sum(pred*idx_tensor, 1) * 3 - 99
-
-        return degree
+        return torch.sum(pred*idx_tensor, 1) * 3 - 99
     
     def get_rotation_matrix(self, yaw, pitch, roll):
         yaw = yaw / 180 * 3.14
@@ -524,9 +523,7 @@ class audio2image(nn.Module):
                          torch.zeros_like(yaw), torch.zeros_like(yaw), torch.ones_like(yaw)], dim=1)
         yaw_mat = yaw_mat.view(yaw_mat.shape[0], 3, 3)
 
-        rot_mat = torch.einsum('bij,bjk,bkm->bim', roll_mat, pitch_mat, yaw_mat)
-
-        return rot_mat
+        return torch.einsum('bij,bjk,bkm->bim', roll_mat, pitch_mat, yaw_mat)
 
     def keypoint_transformation(self, kp_canonical, he):
         kp = kp_canonical['value']    # (bs, k, 3)
@@ -560,5 +557,6 @@ class audio2image(nn.Module):
         kp_canonical = self.kp_extractor(source_image)
         kp_source = self.keypoint_transformation(kp_canonical, pose_source)
         kp_transformed_generated = self.keypoint_transformation(kp_canonical, pose_generated)
-        generated = self.generator(source_image, kp_source=kp_source, kp_driving=kp_transformed_generated)
-        return generated
+        return self.generator(
+            source_image, kp_source=kp_source, kp_driving=kp_transformed_generated
+        )

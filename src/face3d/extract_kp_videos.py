@@ -19,11 +19,7 @@ class KeypointExtractor():
     def extract_keypoint(self, images, name=None, info=True):
         if isinstance(images, list):
             keypoints = []
-            if info:
-                i_range = tqdm(images,desc='landmark Det:')
-            else:
-                i_range = images
-
+            i_range = tqdm(images,desc='landmark Det:') if info else images
             for image in i_range:
                 current_kp = self.extract_keypoint(image)
                 if np.mean(current_kp) == -1 and keypoints:
@@ -32,8 +28,7 @@ class KeypointExtractor():
                     keypoints.append(current_kp[None])
 
             keypoints = np.concatenate(keypoints, 0)
-            np.savetxt(os.path.splitext(name)[0]+'.txt', keypoints.reshape(-1))
-            return keypoints
+            np.savetxt(f'{os.path.splitext(name)[0]}.txt', keypoints.reshape(-1))
         else:
             while True:
                 try:
@@ -52,8 +47,9 @@ class KeypointExtractor():
                     keypoints = -1. * np.ones(shape)                    
                     break
             if name is not None:
-                np.savetxt(os.path.splitext(name)[0]+'.txt', keypoints.reshape(-1))
-            return keypoints
+                np.savetxt(f'{os.path.splitext(name)[0]}.txt', keypoints.reshape(-1))
+
+        return keypoints
 
 def read_video(filename):
     frames = []
@@ -90,11 +86,11 @@ if __name__ == '__main__':
     parser.add_argument('--workers', type=int, default=4)
 
     opt = parser.parse_args()
-    filenames = list()
+    filenames = []
     VIDEO_EXTENSIONS_LOWERCASE = {'mp4'}
     VIDEO_EXTENSIONS = VIDEO_EXTENSIONS_LOWERCASE.union({f.upper() for f in VIDEO_EXTENSIONS_LOWERCASE})
     extensions = VIDEO_EXTENSIONS
-    
+
     for ext in extensions:
         os.listdir(f'{opt.input_dir}')
         print(f'{opt.input_dir}/*.{ext}')
@@ -104,5 +100,5 @@ if __name__ == '__main__':
     args_list = cycle([opt])
     device_ids = opt.device_ids.split(",")
     device_ids = cycle(device_ids)
-    for data in tqdm(pool.imap_unordered(run, zip(filenames, args_list, device_ids))):
+    for _ in tqdm(pool.imap_unordered(run, zip(filenames, args_list, device_ids))):
         None

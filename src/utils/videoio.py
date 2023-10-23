@@ -18,8 +18,8 @@ def load_video_to_cv2(input_path):
     return full_frames
 
 def save_video_with_watermark(video, audio, save_path, watermark=False):
-    temp_file = str(uuid.uuid4())+'.mp4'
-    cmd = r'ffmpeg -y -hide_banner -loglevel error -i "%s" -i "%s" -vcodec copy "%s"' % (video, audio, temp_file)
+    temp_file = f'{str(uuid.uuid4())}.mp4'
+    cmd = f'ffmpeg -y -hide_banner -loglevel error -i "{video}" -i "{audio}" -vcodec copy "{temp_file}"'
     os.system(cmd)
 
     if watermark is False:
@@ -30,12 +30,12 @@ def save_video_with_watermark(video, audio, save_path, watermark=False):
             ##### check if stable-diffusion-webui
             import webui
             from modules import paths
-            watarmark_path = paths.script_path+"/extensions/SadTalker/docs/sadtalker_logo.png"
+            watarmark_path = f"{paths.script_path}/extensions/SadTalker/docs/sadtalker_logo.png"
         except:
             # get the root path of sadtalker.
             dir_path = os.path.dirname(os.path.realpath(__file__))
-            watarmark_path = dir_path+"/../../docs/sadtalker_logo.png"
+            watarmark_path = f"{dir_path}/../../docs/sadtalker_logo.png"
 
-        cmd = r'ffmpeg -y -hide_banner -loglevel error -i "%s" -i "%s" -filter_complex "[1]scale=100:-1[wm];[0][wm]overlay=(main_w-overlay_w)-10:10" "%s"' % (temp_file, watarmark_path, save_path)
+        cmd = f'ffmpeg -y -hide_banner -loglevel error -i "{temp_file}" -i "{watarmark_path}" -filter_complex "[1]scale=100:-1[wm];[0][wm]overlay=(main_w-overlay_w)-10:10" "{save_path}"'
         os.system(cmd)
         os.remove(temp_file)

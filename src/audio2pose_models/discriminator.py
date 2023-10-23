@@ -7,11 +7,7 @@ class ConvNormRelu(nn.Module):
                  kernel_size=None, stride=None, padding=None, norm='BN', leaky=False):
         super().__init__()
         if kernel_size is None:
-            if downsample:
-                kernel_size, stride, padding = 4, 2, 1
-            else:
-                kernel_size, stride, padding = 3, 1, 1
-
+            kernel_size, stride, padding = (4, 2, 1) if downsample else (3, 1, 1)
         if conv_type == '2d':
             self.conv = nn.Conv2d(
                 in_channels,

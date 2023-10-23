@@ -29,7 +29,7 @@ def POS(xp, x):
 
     k, _, _, _ = np.linalg.lstsq(A, b)
 
-    R1 = k[0:3]
+    R1 = k[:3]
     R2 = k[4:7]
     sTx = k[3]
     sTy = k[7]
@@ -87,11 +87,7 @@ def align_img(img, lm, lm3D, mask=None, target_size=224., rescale_factor=102.):
     """
 
     w0, h0 = img.size
-    if lm.shape[0] != 5:
-        lm5p = extract_5p(lm)
-    else:
-        lm5p = lm
-
+    lm5p = extract_5p(lm) if lm.shape[0] != 5 else lm
     # calculate translation and scale factors using 5 facial landmarks and standard landmarks of a 3D face
     t, s = POS(lm5p.transpose(), lm3D.transpose())
     s = rescale_factor/s

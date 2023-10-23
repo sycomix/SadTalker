@@ -45,7 +45,7 @@ class Preprocesser:
         :param filepath: str
         :return: PIL Image
         """
-        lm_chin = lm[0: 17]  # left-right
+        lm_chin = lm[:17]
         lm_eyebrow_left = lm[17: 22]  # left-right
         lm_eyebrow_right = lm[22: 27]  # left-right
         lm_nose = lm[27: 31]  # top-down
@@ -93,7 +93,7 @@ class Preprocesser:
                 min(crop[3] + border, img.size[1]))
         if crop[2] - crop[0] < img.size[0] or crop[3] - crop[1] < img.size[1]:
             # img = img.crop(crop)
-            quad -= crop[0:2]
+            quad -= crop[:2]
 
         # Pad.
         pad = (int(np.floor(min(quad[:, 0]))), int(np.floor(min(quad[:, 1]))), int(np.ceil(max(quad[:, 0]))),

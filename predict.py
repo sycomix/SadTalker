@@ -117,20 +117,19 @@ class Predictor(BasePredictor):
         else:
             ref_eyeblink_coeff_path = None
 
-        if ref_pose is not None:
-            if ref_pose == ref_eyeblink:
-                ref_pose_coeff_path = ref_eyeblink_coeff_path
-            else:
-                ref_pose_videoname = os.path.splitext(os.path.split(ref_pose)[-1])[0]
-                ref_pose_frame_dir = os.path.join(results_dir, ref_pose_videoname)
-                os.makedirs(ref_pose_frame_dir, exist_ok=True)
-                print("3DMM Extraction for the reference video providing pose")
-                ref_pose_coeff_path, _, _ = self.preprocess_model.generate(
-                    ref_pose, ref_pose_frame_dir
-                )
-        else:
+        if ref_pose is None:
             ref_pose_coeff_path = None
 
+        elif ref_pose == ref_eyeblink:
+            ref_pose_coeff_path = ref_eyeblink_coeff_path
+        else:
+            ref_pose_videoname = os.path.splitext(os.path.split(ref_pose)[-1])[0]
+            ref_pose_frame_dir = os.path.join(results_dir, ref_pose_videoname)
+            os.makedirs(ref_pose_frame_dir, exist_ok=True)
+            print("3DMM Extraction for the reference video providing pose")
+            ref_pose_coeff_path, _, _ = self.preprocess_model.generate(
+                ref_pose, ref_pose_frame_dir
+            )
         # audio2ceoff
         batch = get_data(
             first_coeff_path,

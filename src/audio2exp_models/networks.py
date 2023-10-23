@@ -17,11 +17,8 @@ class Conv2d(nn.Module):
         out = self.conv_block(x)
         if self.residual:
             out += x
-        
-        if self.use_act:
-            return self.act(out)
-        else:
-            return out
+
+        return self.act(out) if self.use_act else out
 
 class SimpleWrapperV2(nn.Module):
     def __init__(self) -> None:
@@ -68,7 +65,6 @@ class SimpleWrapperV2(nn.Module):
         x = self.audio_encoder(x).view(x.size(0), -1)
         ref_reshape = ref.reshape(x.size(0), -1)
         ratio = ratio.reshape(x.size(0), -1)
-        
-        y = self.mapping1(torch.cat([x, ref_reshape, ratio], dim=1)) 
-        out = y.reshape(ref.shape[0], ref.shape[1], -1) #+ ref # resudial
-        return out
+
+        y = self.mapping1(torch.cat([x, ref_reshape, ratio], dim=1))
+        return y.reshape(ref.shape[0], ref.shape[1], -1)

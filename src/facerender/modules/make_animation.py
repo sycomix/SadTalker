@@ -13,7 +13,7 @@ def normalize_kp(kp_source, kp_driving, kp_driving_initial, adapt_movement_scale
     else:
         adapt_movement_scale = 1
 
-    kp_new = {k: v for k, v in kp_driving.items()}
+    kp_new = dict(kp_driving.items())
 
     if use_relative_movement:
         kp_value_diff = (kp_driving['value'] - kp_driving_initial['value'])
@@ -28,11 +28,10 @@ def normalize_kp(kp_source, kp_driving, kp_driving_initial, adapt_movement_scale
 
 def headpose_pred_to_degree(pred):
     device = pred.device
-    idx_tensor = [idx for idx in range(66)]
+    idx_tensor = list(range(66))
     idx_tensor = torch.FloatTensor(idx_tensor).type_as(pred).to(device)
     pred = F.softmax(pred)
-    degree = torch.sum(pred*idx_tensor, 1) * 3 - 99
-    return degree
+    return torch.sum(pred*idx_tensor, 1) * 3 - 99
 
 def get_rotation_matrix(yaw, pitch, roll):
     yaw = yaw / 180 * 3.14
@@ -58,9 +57,7 @@ def get_rotation_matrix(yaw, pitch, roll):
                          torch.zeros_like(roll), torch.zeros_like(roll), torch.ones_like(roll)], dim=1)
     roll_mat = roll_mat.view(roll_mat.shape[0], 3, 3)
 
-    rot_mat = torch.einsum('bij,bjk,bkm->bim', pitch_mat, yaw_mat, roll_mat)
-
-    return rot_mat
+    return torch.einsum('bij,bjk,bkm->bim', pitch_mat, yaw_mat, roll_mat)
 
 def keypoint_transformation(kp_canonical, he, wo_exp=False):
     kp = kp_canonical['value']    # (bs, k, 3) 
@@ -162,9 +159,15 @@ class AnimateModel(torch.nn.Module):
         pitch_c_seq = x['pitch_c_seq']
         roll_c_seq = x['roll_c_seq']
 
-        predictions_video = make_animation(source_image, source_semantics, target_semantics,
-                                        self.generator, self.kp_extractor,
-                                        self.mapping, use_exp = True,
-                                        yaw_c_seq=yaw_c_seq, pitch_c_seq=pitch_c_seq, roll_c_seq=roll_c_seq)
-        
-        return predictions_video
+        return make_animation(
+            source_image,
+            source_semantics,
+            target_semantics,
+            self.generator,
+            self.kp_extractor,
+            self.mapping,
+            use_exp=True,
+            yaw_c_seq=yaw_c_seq,
+            pitch_c_seq=pitch_c_seq,
+            roll_c_seq=roll_c_seq,
+        )

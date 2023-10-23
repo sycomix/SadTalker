@@ -20,11 +20,7 @@ class SadTalker():
 
     def __init__(self, checkpoint_path='checkpoints', config_path='src/config', lazy_load=False):
 
-        if torch.cuda.is_available() :
-            device = "cuda"
-        else:
-            device = "cpu"
-        
+        device = "cuda" if torch.cuda.is_available() else "cpu"
         self.device = device
 
         os.environ['TORCH_HOME']= checkpoint_path
@@ -45,7 +41,7 @@ class SadTalker():
 
         self.sadtalker_paths = init_path(self.checkpoint_path, self.config_path, size, False, preprocess)
         print(self.sadtalker_paths)
-            
+
         self.audio_to_coeff = Audio2Coeff(self.sadtalker_paths, self.device)
         self.preprocess_model = CropAndExtract(self.sadtalker_paths, self.device)
         self.animate_from_coeff = AnimateFromCoeff(self.sadtalker_paths, self.device)
@@ -58,7 +54,7 @@ class SadTalker():
         os.makedirs(input_dir, exist_ok=True)
 
         print(source_image)
-        pic_path = os.path.join(input_dir, os.path.basename(source_image)) 
+        pic_path = os.path.join(input_dir, os.path.basename(source_image))
         shutil.move(source_image, input_dir)
 
         if driven_audio is not None and os.path.isfile(driven_audio):
@@ -72,7 +68,7 @@ class SadTalker():
                 shutil.move(driven_audio, input_dir)
 
         elif use_idle_mode:
-            audio_path = os.path.join(input_dir, 'idlemode_'+str(length_of_audio)+'.wav') ## generate audio from this new audio_path
+            audio_path = os.path.join(input_dir, f'idlemode_{str(length_of_audio)}.wav')
             from pydub import AudioSegment
             one_sec_segment = AudioSegment.silent(duration=1000*length_of_audio)  #duration in milliseconds
             one_sec_segment.export(audio_path, format="wav")
@@ -82,19 +78,19 @@ class SadTalker():
 
         if use_ref_video and ref_info == 'all': # full ref mode
             ref_video_videoname = os.path.basename(ref_video)
-            audio_path = os.path.join(save_dir, ref_video_videoname+'.wav')
+            audio_path = os.path.join(save_dir, f'{ref_video_videoname}.wav')
             print('new audiopath:',audio_path)
             # if ref_video contains audio, set the audio from ref_video.
-            cmd = r"ffmpeg -y -hide_banner -loglevel error -i %s %s"%(ref_video, audio_path)
+            cmd = f"ffmpeg -y -hide_banner -loglevel error -i {ref_video} {audio_path}"
             os.system(cmd)        
 
         os.makedirs(save_dir, exist_ok=True)
-        
+
         #crop image and extract 3dmm from image
         first_frame_dir = os.path.join(save_dir, 'first_frame_dir')
         os.makedirs(first_frame_dir, exist_ok=True)
         first_coeff_path, crop_pic_path, crop_info = self.preprocess_model.generate(pic_path, first_frame_dir, preprocess, True, size)
-        
+
         if first_coeff_path is None:
             raise AttributeError("No face is detected")
 
@@ -109,18 +105,18 @@ class SadTalker():
             ref_video_coeff_path = None
 
         if use_ref_video:
-            if ref_info == 'pose':
-                ref_pose_coeff_path = ref_video_coeff_path
+            if ref_info == 'all':
+                ref_pose_coeff_path = None
                 ref_eyeblink_coeff_path = None
             elif ref_info == 'blink':
                 ref_pose_coeff_path = None
                 ref_eyeblink_coeff_path = ref_video_coeff_path
+            elif ref_info == 'pose':
+                ref_pose_coeff_path = ref_video_coeff_path
+                ref_eyeblink_coeff_path = None
             elif ref_info == 'pose+blink':
                 ref_pose_coeff_path = ref_video_coeff_path
                 ref_eyeblink_coeff_path = ref_video_coeff_path
-            elif ref_info == 'all':            
-                ref_pose_coeff_path = None
-                ref_eyeblink_coeff_path = None
             else:
                 raise('error in refinfo')
         else:
@@ -147,9 +143,10 @@ class SadTalker():
         if torch.cuda.is_available():
             torch.cuda.empty_cache()
             torch.cuda.synchronize()
-            
-        import gc; gc.collect()
-        
+
+        import gc
+        gc.collect()
+
         return return_path
 
     

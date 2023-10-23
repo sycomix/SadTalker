@@ -24,14 +24,10 @@ def check_python_version():
     is_windows = platform.system() == "Windows"
     major = sys.version_info.major
     minor = sys.version_info.minor
-    micro = sys.version_info.micro
+    supported_minors = [10] if is_windows else [7, 8, 9, 10, 11]
+    if major != 3 or minor not in supported_minors:
 
-    if is_windows:
-        supported_minors = [10]
-    else:
-        supported_minors = [7, 8, 9, 10, 11]
-
-    if not (major == 3 and minor in supported_minors):
+        micro = sys.version_info.micro
 
         raise (f"""
 INCOMPATIBLE PYTHON VERSION
@@ -189,11 +185,14 @@ def prepare_environment():
     run_pip(f"install -r \"{requirements_file}\"", "requirements for SadTalker WebUI (may take longer time in first time)")
 
     if sys.platform != 'win32' and not is_installed('tts'):
-        run_pip(f"install TTS", "install TTS individually in SadTalker, which might not work on windows.")
+        run_pip(
+            "install TTS",
+            "install TTS individually in SadTalker, which might not work on windows.",
+        )
 
 
 def start():
-    print(f"Launching SadTalker Web UI")
+    print("Launching SadTalker Web UI")
     from app import sadtalker_demo
     demo = sadtalker_demo()
     demo.queue()
